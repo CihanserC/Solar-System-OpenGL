@@ -1,4 +1,13 @@
-#include <gl\glut.h>		
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#else
+#include <GL/freeglut.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#endif
+
 #define PI 3.14159265
 #define PIdiv180 (PI/180.0)
 

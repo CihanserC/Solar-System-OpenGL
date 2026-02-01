@@ -1,7 +1,10 @@
 #include "camera.h"
-#include "math.h"
+#include <cmath>
 #include <iostream>
-#include "windows.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #define SQR(x) (x*x)
 

@@ -1,0 +1,85 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build with CMake",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-B",
+                "build",
+                "-G",
+                "MinGW Makefiles"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Compile Solar System",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "build"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "dependsOn": ["Build with CMake"],
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Build and Run",
+            "type": "shell",
+            "command": "${workspaceFolder}/build/SolarSystem.exe",
+            "dependsOn": ["Compile Solar System"],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build with g++ (Simple)",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-o",
+                "SolarSystem.exe",
+                "Solar System/Solar System/Main.cpp",
+                "Solar System/Solar System/camera.cpp",
+                "-lopengl32",
+                "-lglu32",
+                "-lfreeglut",
+                "-lwinmm",
+                "-I${workspaceFolder}/Solar System/Solar System"
+            ],
+            "group": "build",
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Run Solar System",
+            "type": "shell",
+            "command": "${workspaceFolder}/SolarSystem.exe",
+            "problemMatcher": []
+        },
+        {
+            "label": "Clean Build",
+            "type": "shell",
+            "command": "Remove-Item",
+            "args": [
+                "-Path",
+                "build",
+                "-Recurse",
+                "-Force",
+                "-ErrorAction",
+                "SilentlyContinue"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}

@@ -1,187 +1,189 @@
-/*					16070001020			C�HANSER �ALI�KAN
+/*
+ * Solar System OpenGL Simulation
+ * Student ID: 16070001020
+ * Name: CIHANSER CALISKAN
+ *
+ * Camera Controls:
+ * w : move forwards
+ * s : move backwards
+ * a : turn left
+ * d : turn right
+ * x : look up
+ * z : look down
+ * v : strafe right
+ * c : strafe left
+ * r : move up
+ * f : move down
+ * q : exit
+ * l : enable/disable lighting
+ *
+ * ========================================
+ * Planetary Radius Data
+ * 
+ * Note: All calculations are relative to Earth's radius
+ *
+ * Sun     - 695,510 km (109.2x Earth)
+ * Jupiter -  69,911 km (11.0x Earth)
+ * Saturn  -  58,232 km (9.1x Earth)
+ * Uranus  -  25,362 km (4.0x Earth)
+ * Neptune -  24,622 km (3.9x Earth)
+ * Earth   -   6,371 km (1.0x - baseline)
+ * Venus   -   6,052 km (0.95x Earth)
+ * Mars    -   3,390 km (0.53x Earth)
+ * Mercury -   2,440 km (0.38x Earth)
+ *
+ * ========================================
+ * Orbital Distance from Sun
+ *
+ * Note: Distances are scaled based on
+ * Astronomical Units (AU)
+ *
+ * Mercury =   4 AU
+ * Venus   =   7 AU
+ * Earth   =  10 AU
+ * Mars    =  15 AU
+ * Jupiter =  52 AU
+ * Saturn  =  96 AU
+ * Uranus  = 192 AU
+ * Neptune = 300 AU
+ *
+ * ========================================
+ * Orbital Velocities Around the Sun
+ *
+ * Mercury - 47.87  km/s (1.607x Earth)
+ * Venus   - 35.02  km/s (1.176x Earth)
+ * Earth   - 29.78  km/s (1.0x - baseline)
+ * Mars    - 24.077 km/s (0.809x Earth)
+ * Jupiter - 13.07  km/s (0.439x Earth)
+ * Saturn  -  9.63  km/s (0.323x Earth)
+ * Uranus  -  6.81  km/s (0.229x Earth)
+ * Neptune -  5.43  km/s (0.182x Earth)
+ *
+ */
 
-Camera movements:
-w : forwards
-s : backwards
-a : turn left
-d : turn right
-x : turn up
-z : turn down
-v : straight right
-c : straight left
-r : move up
-f : move down
-q: exit
-l: enable/disable lighting
 
------------------------------
- Radius Data of the planets and the Sun
-
- Note: Calculations are made
- based on earth.
-
-Sun     - 695,510 km
-Jupiter - 69,911  km
-Saturn  - 58,232 km
-Uranus  - 25,362 km
-Neptune - 24,622 km
-Earth   - 6,371 km
-Venus   - 6,052 km
-Mars    - 3,390 km
-Mercury - 2,440 km
-
------------------------------------------
-
-Distance of planets to sun
-
-Note: Ratios are based on
-astronomical unit(AU).
-
-Mercury = 4
-Venus   = 7
-Earth   = 10
-Mars    = 15
-Jupiter = 52
-Saturn  = 96
-Uranus  = 192
-Neptune = 300
-
-------------
-Rotational speeds of planets around the sun
-
-mercury - 47.87  km/s
-venus   - 35.02  km/s
-earth   - 29.78  km/s
-mars    - 24.077 km/s
-jupiter - 13.07  km/s
-saturn  - 9.63   km/s
-uranus  - 6.81   km/s
-Neptune - 5.43   km/s
-
-*/
-
-#include <GL\glut.h>
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#else
+#include <GL/freeglut.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#ifdef _WIN32
 #include <windows.h>
+#endif
+#endif
+
 #include "camera.h"
+#include "solar_system.h"
+#include "texture_manager.h"
+#include "starfield.h"
+#include "ui_renderer.h"
+#include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include<iostream> 
+#include <iostream> 
 #include <stdarg.h>
-#include<string> 
-#include<math.h>
+#include <string> 
+#include <math.h>
 #include <time.h> 
-//#include<tgmath.h>
 
 #define ShowUpvector 
 
+// Global objects
 CCamera Camera;
+SolarSystem* solarSystem = nullptr;
+TextureManager* textureManager = nullptr;
+StarField* starField = nullptr;
+UIRenderer* uiRenderer = nullptr;
+DeltaTime deltaTime;
+FPSCounter fpsCounter;
 
-//----------------------------------
-// Radius Data
-const GLfloat Earth_Radius = 1.0;
-const GLfloat Sun_Radius = 109.2;
-const GLfloat Mercury_Radius = 0.38;
-const GLfloat Venus_Radius = 0.95;
-const GLfloat Mars_Radius = 0.53;
-const GLfloat Jupiter_Radius = 11.0;
-const GLfloat Saturn_Radius = 9.1;
-const GLfloat Uranus_Radius = 4.0;
-const GLfloat Neptune_Radius = 3.9;
+// Window dimensions
+int windowWidth = 800;
+int windowHeight = 600;
 
-// Dist to Sun Data
+// Notes: All planet data is now in Planet and SolarSystem classes
+// These constants are kept for reference
 
-const GLfloat Mercury_Dist = 4.0;
-const GLfloat Venus_Dist = 7.0;
-const GLfloat Earth_Dist = 10.0;
-const GLfloat Mars_Dist = 15.0;
-const GLfloat Jupiter_Dist = 52.0;
-const GLfloat Saturn_Dist = 96.0;
-const GLfloat Uranus_Dist = 192.0;
-const GLfloat Neptune_Dist = 300.0;
-
-// Velocity Data
-const GLfloat Earth_Velocity = 1.0;
-const GLfloat Mercury_Velocity = 1.607;
-const GLfloat Venus_Velocity = 1.176;
-const GLfloat Mars_Velocity = 0.8085;
-const GLfloat Jupiter_Velocity = 0.4389;
-const GLfloat Saturn_Velocity = 0.3234;
-const GLfloat Uranus_Velocity = 0.2287;
-const GLfloat Neptune_Velocity = 0.1823;
-
-float speedMercury = 0.01607;
-float speedVenus = 0.01176;
-float speedEarth = 0.01 ;
-float speedMars = 0.008085;
-float speedJupiter = 0.004389;
-float speedSaturn= 0.003234;
-float speedUranus = 0.002287;
-float speedNeptune = 0.001823;
-
-
-// Planet RGB Data
-//Sun_color =  glColor3f(1.0, 0.84, 0.25);
-//Earth_color =  glColor3f(0.88, 0.66, 0.37);
-//Mercury_color =  glColor3f(0.82, 0.81, 0.81);
-//Venus_color =  glColor3f(0.55, 0.5, 0.52);
-//Mars_color =  glColor3f(0.95, 0.31, 0.09);
-//Jupiter_color =  glColor3f(0.84, 0.62, 0.5);
-//Saturn_color =  glColor3f(0.82, 0.73, 0.73);
-//Uranus_color =  glColor3f(0.74, 0.89, 0.9);
-//Neptune_color = glColor3f(0.45, 0.68, 0.68);
-
-//------------------------------
-
+// Material properties for lighting
 GLfloat diffuseMaterial[4] = { 0.5, 0.5, 0.5, 1.0 };
 
+// Lighting toggle state
 bool lightswitch = true;
 
-//float SunPos[3] = {0 , 0, 0};
-float MercuryPos[3] = { 4 ,0, 1 };
-float VenusPos[3] = { 7 ,0, 20 };
-float EarthPos[3] = { 10 ,0, 30 };
-float MarsPos[3] = { 15 ,0, 40 };
-float JupiterPos[3] = { 52,0, 50 };
-float SaturnPos[3] = { 96 ,0, 60 };
-float UranusPos[3] = { 192 ,0, 70 };
-float NeptunePos[3] = { 300 ,0, 80 };
+// Mouse control variables
+bool mouseEnabled = true;
+int lastMouseX = -1;
+int lastMouseY = -1;
+bool firstMouse = true;
+float mouseSensitivity = 0.2f;
+
+// Simulation control
+bool isPaused = false;
+
+// Keyboard state for smooth movement
+bool keys[256] = {false};
+float moveSpeed = 0.5f;  // Hareket hızı (smooth için daha küçük)
 
 
- float angle = 0.0;
- float angleMercury = 0.0;
- float angleVenus = 0.0;
- float angleEarth = 0.0;
- float angleMars = 0.0;
- float angleJupiter = 0.0;
- float angleSaturn = 0.0;
- float angleUranus = 0.0;
- float angleNeptune = 0.0;
-
-
+/**
+ * Initialize lighting and material properties
+ */
 void lightInit(void)
 {
 	GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
-	GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
+	GLfloat mat_ambient[] = { 0.2, 0.2, 0.2, 1.0 };
+	GLfloat light_position[] = { 0.0, 0.0, 0.0, 1.0 };  // Sun at center
+	GLfloat light_ambient[] = { 0.2, 0.2, 0.2, 1.0 };
+	GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
 
+	// Set background color to black (space)
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glShadeModel(GL_SMOOTH);
 	glEnable(GL_DEPTH_TEST);
+	
+	// Alpha blending (for trails)
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	
+	// Configure material properties
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuseMaterial);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-	glMaterialf(GL_FRONT, GL_SHININESS, 25.0);
+	glMaterialf(GL_FRONT, GL_SHININESS, 50.0);
+	
+	// Configure light source (G?ne?'ten yay?lacak)
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+	
+	// Light attenuation
+	glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0);
+	glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.0);
+	glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0);
+	
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 
-	bool lightswitch = true;
-
-
-	glColorMaterial(GL_FRONT, GL_DIFFUSE);
+	// Enable color materials
+	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
 }
 
+/**
+ * Reshape callback - handles window resizing
+ * @param x New window width
+ * @param y New window height
+ */
 void reshape(int x, int y)
 {
+	windowWidth = x;
+	windowHeight = y;
+	
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(40.0, (GLdouble)x / (GLdouble)y, 0.5, 1000.0);
@@ -191,258 +193,224 @@ void reshape(int x, int y)
 
 
 
-void DrawOrbit(float r, float x, float z)
-{
-	glBegin(GL_LINE_STRIP);
-	glColor3f(1.0, 0, 0);
-	glTranslatef(x, 0, z);
-
-	for (int i = 0; i < 361; i++)
-	{
-		glVertex3f((r  ) * (float)sin(i * PI / 180), 0, (r  ) * (float)cos(i * PI / 180));
-	}
-	glEnd();
-}
-
-void DrawOrbits() {
-
-	DrawOrbit(4, 0, 0);
-	DrawOrbit(7, 0, 0);
-	DrawOrbit(10.1, 0, 0);
-	DrawOrbit(15.0, 0, 0);
-	DrawOrbit(52.0, 0, 0);
-	DrawOrbit(96.0, 0, 0);
-	DrawOrbit(192.0, 0, 0);
-	DrawOrbit(300.0, 0, 0);
-}
-
-
-void idle()
-{
-
-	if (angle >= (2.0 * PI)) {
-		angle = angle - (2.0 * PI);
-	}
-	if (angleMercury >= (2.0 * PI)) {
-		angleMercury = angleMercury - (2.0 * PI);
-	}
-	if (angleVenus >= (2.0 * PI)) {
-		angleVenus = angleVenus - (2.0 * PI);
-	}
-	if (angleEarth >= (2.0 * PI)) {
-		angleEarth = angleEarth - (2.0 * PI);
-	}
-	if (angleMars >= (2.0 * PI)) {
-		angleMars = angleMars - (2.0 * PI);
-	}
-	if (angleJupiter >= (2.0 * PI)) {
-		angleJupiter = angleJupiter - (2.0 * PI);
-	}
-	if (angleSaturn >= (2.0 * PI)) {
-		angleSaturn = angleSaturn - (2.0 * PI);
-	}
-	if (angleUranus >= (2.0 * PI)) {
-		angleUranus = angleUranus - (2.0 * PI);
-	}
-	if (angleNeptune >= (2.0 * PI)) {
-		angleNeptune = angleNeptune - (2.0 * PI);
-	}
-
-	 angleMercury +=speedMercury;
-	 angleVenus += speedVenus;
-	 angleEarth += speedEarth;
-	 angleMars += speedMars;
-	 angleJupiter += speedJupiter;
-	 angleSaturn += speedSaturn;
-	 angleUranus += speedUranus;
-	 angleNeptune += speedNeptune;
-
-	glutPostRedisplay();
-
-}
-
-
-void DrawPlanet(float radius, float y,  float z, float r, float g, float b)
-{
-	glPushMatrix();
-	glColor3f(r, g, b);
-	/*
-	if (y != 0) { // if it is not sun
-		glTranslatef(y + 109.2, 0, z);
-	}
-	else {
-		glTranslatef(y, 0, z);
-	}
-	*/
-	
-
-	glTranslatef(y, 0, z);
-	glutSolidSphere(radius, 20, 16);
-	glFlush();
-	glPopMatrix();
-
-}
-
-
-void OpMercury(float x) {
-	
-	MercuryPos[0] = x * sin(angleMercury );
-	MercuryPos[2] = x * cos(angleMercury);
-	
-}
-
-void OpVenus(float x) {
-	VenusPos[0] = 7 * sin(angleVenus );
-	VenusPos[2] = 7 * cos(angleVenus);
-
-}
-
-
-void OpEarth(float x) {
-	EarthPos[0] = x * sin(angleEarth);
-	EarthPos[2] = x * cos(angleEarth);
-	
-}
-
-void OpMars(float x) {
-	MarsPos[0] = x * sin(angleMars);
-	MarsPos[2] = x * cos(angleMars);
-	
-}
-
-void OpJupiter(float x) {
-	JupiterPos[0] = x * sin(angleJupiter);
-	JupiterPos[2] = x * cos(angleJupiter);
-
-}
-
-void OpSaturn(float x) {
-	SaturnPos[0] = x * sin(angleSaturn);
-	SaturnPos[2] = x * cos(angleSaturn );
-
-}
-
-void OpUranus(float x) {
-	UranusPos[0] = x * sin(angleUranus);
-	UranusPos[2] = x * cos(angleUranus);
-
-}
-
-void OpNeptune(float x) {
-	NeptunePos[0] = x * sin(angleNeptune);
-	NeptunePos[2] = x * cos(angleNeptune);
-	
-}
-
-
+/**
+ * Main display callback - renders the entire solar system
+ */
 void Display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glLoadIdentity();
 	Camera.Render();
 
-	//Draw the Solar System
+	// Render starfield (background)
+	if (starField) {
+		starField->render();
+	}
 
-	//DrawPlanet(radius, dist to sun_x, 0, dist to sun_z, red, green, blue);
+	// Render solar system
+	if (solarSystem) {
+		solarSystem->render();
+	}
+
+	// Render UI
+	if (uiRenderer) {
+		uiRenderer->render(solarSystem, windowWidth, windowHeight);
+	}
 	
-	DrawOrbits();
-	//Sun
-	DrawPlanet(1, 0,  0, 1.0, 0.84, 0.25);
-	
-	//Mercury
-	DrawPlanet(0.38, MercuryPos[0], MercuryPos[2], 0.82, 0.81, 0.81);
-	OpMercury(4);
-	
-	//Venus
-	DrawPlanet(0.95, VenusPos[0], VenusPos[2], 0.55, 0.5, 0.52);
-	OpVenus(7);
-	
-	//Earth
-	DrawPlanet(1.0, EarthPos[0], EarthPos[2], 0.88, 0.66, 0.37);
-	OpEarth(10);
+	// Show PAUSE indicator if paused
+	if (isPaused) {
+		glMatrixMode(GL_PROJECTION);
+		glPushMatrix();
+		glLoadIdentity();
+		gluOrtho2D(0, windowWidth, 0, windowHeight);
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
+		glLoadIdentity();
+		
+		glDisable(GL_LIGHTING);
+		glDisable(GL_DEPTH_TEST);
+		
+		// Draw semi-transparent background
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glColor4f(0.0f, 0.0f, 0.0f, 0.5f);
+		glBegin(GL_QUADS);
+		glVertex2f(windowWidth/2 - 100, windowHeight/2 - 30);
+		glVertex2f(windowWidth/2 + 100, windowHeight/2 - 30);
+		glVertex2f(windowWidth/2 + 100, windowHeight/2 + 30);
+		glVertex2f(windowWidth/2 - 100, windowHeight/2 + 30);
+		glEnd();
+		glDisable(GL_BLEND);
+		
+		// Draw text
+		glColor3f(1.0f, 1.0f, 0.0f);
+		glRasterPos2f(windowWidth/2 - 40, windowHeight/2 - 5);
+		const char* pauseText = "PAUSED";
+		for (const char* c = pauseText; *c != '\0'; c++) {
+			glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+		}
+		
+		glEnable(GL_DEPTH_TEST);
+		if (lightswitch) glEnable(GL_LIGHTING);
+		
+		glPopMatrix();
+		glMatrixMode(GL_PROJECTION);
+		glPopMatrix();
+		glMatrixMode(GL_MODELVIEW);
+	}
 
+	// Update FPS
+	fpsCounter.update();
 
-	//Mars
-	DrawPlanet(0.53, MarsPos[0], MarsPos[2], 0.95, 0.31, 0.09);
-	OpMars(15);
-
-
-	//Jupiter
-	DrawPlanet(11.0, JupiterPos[0], JupiterPos[2], 0.84, 0.62, 0.5);
-	OpJupiter(52);
-
-	//Saturn
-	DrawPlanet(9.1, SaturnPos[0], SaturnPos[2], 0.82, 0.73, 0.73);
-	OpSaturn(96);
-
-	//Uranus
-	DrawPlanet(4.0, UranusPos[0], UranusPos[2], 0.74, 0.89, 0.9);
-	OpUranus(192);
-
-	//Neptune
-	DrawPlanet(3.9, NeptunePos[0], NeptunePos[2], 0.45, 0.68, 0.68);
-	OpNeptune(300);
-	
-	idle();
-
-
-	//finish rendering
+	// Finish rendering
 	glFlush();
 	glutSwapBuffers();
+}
 
+/**
+ * Idle callback - updates animation state
+ */
+void idle()
+{
+	// Skip updates if paused
+	if (isPaused) {
+		glutPostRedisplay();  // Still redraw (for UI updates)
+		return;
+	}
+	
+	// Update delta time
+	deltaTime.update();
+	
+	// Smooth camera movement based on key states
+	if (keys['w'] || keys['W']) {
+		Camera.MoveForward(-moveSpeed);
+	}
+	if (keys['s'] || keys['S']) {
+		Camera.MoveForward(moveSpeed);
+	}
+	if (keys['a'] || keys['A']) {
+		Camera.RotateY(moveSpeed * 0.5f);
+	}
+	if (keys['d'] || keys['D']) {
+		Camera.RotateY(-moveSpeed * 0.5f);
+	}
+	if (keys['x'] || keys['X']) {
+		Camera.RotateX(moveSpeed * 0.5f);
+	}
+	if (keys['z'] || keys['Z']) {
+		Camera.RotateX(-moveSpeed * 0.5f);
+	}
+	if (keys['c'] || keys['C']) {
+		Camera.StrRight(-moveSpeed);
+	}
+	if (keys['v'] || keys['V']) {
+		Camera.StrRight(moveSpeed);
+	}
+	if (keys['r'] || keys['R']) {
+		Camera.MoveUpward(moveSpeed * 0.5f);
+	}
+	if (keys['f'] || keys['F']) {
+		Camera.MoveUpward(-moveSpeed * 0.5f);
+	}
+	
+	// Update solar system
+	if (solarSystem) {
+		solarSystem->update(deltaTime.getDelta());
+	}
+
+	// Request display update
+	glutPostRedisplay();
+}
+
+/**
+ * Mouse motion callback - handles camera rotation with mouse
+ * @param x Current mouse x-coordinate
+ * @param y Current mouse y-coordinate
+ */
+void mouseMotion(int x, int y)
+{
+	if (!mouseEnabled) return;
+	
+	// Initialize on first mouse movement
+	if (firstMouse) {
+		lastMouseX = x;
+		lastMouseY = y;
+		firstMouse = false;
+		return;
+	}
+	
+	// Calculate mouse movement
+	int deltaX = x - lastMouseX;
+	int deltaY = y - lastMouseY;
+	
+	// Update camera rotation
+	if (deltaX != 0) {
+		Camera.RotateY(-deltaX * mouseSensitivity);
+	}
+	if (deltaY != 0) {
+		Camera.RotateX(-deltaY * mouseSensitivity);
+	}
+	
+	// Store current position
+	lastMouseX = x;
+	lastMouseY = y;
+}
+
+/**
+ * Mouse button callback - handles mouse clicks
+ * @param button Mouse button that was pressed/released
+ * @param state Button state (GLUT_DOWN or GLUT_UP)
+ * @param x Mouse x-coordinate at time of click
+ * @param y Mouse y-coordinate at time of click
+ */
+void mouseButton(int button, int state, int x, int y)
+{
+	// Reset mouse tracking on button press
+	if (state == GLUT_DOWN) {
+		lastMouseX = x;
+		lastMouseY = y;
+		firstMouse = false;
+	}
+}
+
+/**
+ * Keyboard up callback - handles key release for smooth movement
+ * @param key The key that was released
+ * @param x Mouse x-coordinate at time of key release
+ * @param y Mouse y-coordinate at time of key release
+ */
+void KeyboardUp(unsigned char key, int x, int y)
+{
+	// Mark key as released
+	keys[key] = false;
 }
 
 
+/**
+ * Keyboard callback - handles user input
+ * @param key The key that was pressed
+ * @param x Mouse x-coordinate at time of keypress
+ * @param y Mouse y-coordinate at time of keypress
+ */
 void Keyboard(unsigned char key, int x, int y)
 {
+	// Mark key as pressed for smooth movement
+	keys[key] = true;
+	
 	switch (key)
 	{
-
-	case 'a':
-		Camera.RotateY(5.0);
-		Display();
-		break;
-	case 'd':
-		Camera.RotateY(-5.0);
-		Display();
-		break;
-	case 'w':
-		Camera.MoveForward(-6.1);
-		Display();
-		break;
-	case 's':
-		Camera.MoveForward(6.1);
-		Display();
-		break;
-	case 'x':
-		Camera.RotateX(5.0);
-		Display();
-		break;
-	case 'z':
-		Camera.RotateX(-5.0);
-		Display();
-		break;
-	case 'c':
-		Camera.StrRight(-6.1);
-		Display();
-		break;
-	case 'v':
-		Camera.StrRight(6.1);
-		Display();
-		break;
-	case 'f':
-		Camera.MoveUpward(-3.3);
-		Display();
-		break;
-	case 'r':
-		Camera.MoveUpward(3.3);
-		Display();
-		break;
-	case 'q':
+	// Camera controls are now handled in idle() for smooth movement
+	// W, A, S, D, X, Z, C, V, R, F are processed there
+	
+	// System controls
+	case 'q':  // Quit application
+		#ifdef _WIN32
 		PostQuitMessage(0);
+		#else
+		exit(0);
+		#endif
 		break;
-	case 'l':
-
+	case 'l':  // Toggle lighting on/off
 		if (lightswitch == true)
 		{
 			glDisable(GL_LIGHT0);
@@ -455,43 +423,215 @@ void Keyboard(unsigned char key, int x, int y)
 			lightswitch = true;
 			break;
 		}
-
+		break;
+	case 'm':  // Toggle mouse control
+	case 'M':
+		mouseEnabled = !mouseEnabled;
+		firstMouse = true;  // Reset mouse tracking
+		std::cout << "Mouse control: " << (mouseEnabled ? "ENABLED" : "DISABLED") << std::endl;
+		break;
+	case 'p':  // Pause/Resume simulation
+	case 'P':
+		isPaused = !isPaused;
+		std::cout << "Simulation: " << (isPaused ? "PAUSED" : "RUNNING") << std::endl;
+		break;
+		
+	// New features
+	case 't':  // Toggle trails
+	case 'T':
+		if (solarSystem) {
+			solarSystem->toggleTrails();
+		}
+		break;
+	case 'o':  // Toggle orbits
+	case 'O':
+		if (solarSystem) {
+			solarSystem->toggleOrbits();
+		}
+		break;
+	case 'i':  // Toggle info panel
+	case 'I':
+		if (uiRenderer) {
+			uiRenderer->toggleInfo();
+		}
+		break;
+	case 'h':  // Toggle help
+	case 'H':
+		if (uiRenderer) {
+			uiRenderer->toggleHelp();
+		}
+		break;
+	case '+':  // Increase time scale
+	case '=':
+		if (solarSystem) {
+			solarSystem->increaseTimeScale();
+		}
+		break;
+	case '-':  // Decrease time scale
+	case '_':
+		if (solarSystem) {
+			solarSystem->decreaseTimeScale();
+		}
+		break;
+		
+	// Planet selection (1-8)
+	case '1':
+		if (solarSystem) solarSystem->selectPlanet(0);  // Mercury
+		break;
+	case '2':
+		if (solarSystem) solarSystem->selectPlanet(1);  // Venus
+		break;
+	case '3':
+		if (solarSystem) solarSystem->selectPlanet(2);  // Earth
+		break;
+	case '4':
+		if (solarSystem) solarSystem->selectPlanet(3);  // Mars
+		break;
+	case '5':
+		if (solarSystem) solarSystem->selectPlanet(4);  // Jupiter
+		break;
+	case '6':
+		if (solarSystem) solarSystem->selectPlanet(5);  // Saturn
+		break;
+	case '7':
+		if (solarSystem) solarSystem->selectPlanet(6);  // Uranus
+		break;
+	case '8':
+		if (solarSystem) solarSystem->selectPlanet(7);  // Neptune
+		break;
+	case '0':  // Clear selection
+		if (solarSystem) solarSystem->clearSelection();
+		break;
 	}
 }
 
+/**
+ * Main entry point
+ * Initializes OpenGL, sets up window, and starts the main loop
+ */
 int main(int argc, char **argv)
 { 
-	// The sun radius is assumed 1 because realistic sun radius was corrupting the other planets.
-	
+	// Initialize GLUT
 	glutInit(&argc, argv);
-	//glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH);
-	/*
-	Camera movements :
-	w: forwards
-	s : backwards
-	a : turn left
-	d : turn right
-	x : turn up
-	z : turn down
-	v : straight right
-	c : straight left
-	r : move up
-	f : move down
-	q : exit
-	l : enable / disable lighting
-
-	*/
-
-	glutInitWindowSize(600, 600);
-	glutCreateWindow("Solar System");
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+	
+	// Create window
+	glutInitWindowSize(windowWidth, windowHeight);
+	glutCreateWindow("Solar System - OpenGL Simulation [Enhanced]");
+	
+	// Initialize lighting and materials
 	lightInit();
-	Camera.Move(Vector3D(0, 100.0, 0.0));
-	Camera.RotateX(-85.0);
-	Camera.MoveForward(200);
+	
+	// Initialize texture manager and load textures
+	textureManager = new TextureManager();
+	std::cout << "Loading planet textures..." << std::endl;
+	textureManager->loadPlanetTextures();
+	
+	// Initialize solar system
+	solarSystem = new SolarSystem();
+	
+	// Apply textures to planets (if available)
+	if (solarSystem->getPlanetCount() > 0) {
+		const char* planetNames[] = {"mercury", "venus", "earth", "mars", 
+		                             "jupiter", "saturn", "uranus", "neptune"};
+		for (int i = 0; i < 8 && i < solarSystem->getPlanetCount(); i++) {
+			Planet* planet = solarSystem->getPlanet(i);
+			if (planet) {
+				GLuint texID = textureManager->getTexture(planetNames[i]);
+				if (texID > 0) {
+					planet->setTexture(texID);
+					std::cout << "Applied texture to " << planetNames[i] << std::endl;
+				}
+			}
+		}
+		
+		// Special handling for Earth - day/night textures
+		Planet* earth = solarSystem->getPlanet(2); // Earth is 3rd planet (index 2)
+		if (earth) {
+			GLuint dayTexID = textureManager->getTexture("earth_day");
+			GLuint nightTexID = textureManager->getTexture("earth_night");
+			
+			if (dayTexID > 0) {
+				earth->setTexture(dayTexID);
+				std::cout << "Applied day texture to Earth" << std::endl;
+			}
+			if (nightTexID > 0) {
+				earth->setNightTexture(nightTexID);
+				std::cout << "Applied night texture to Earth (day/night cycle enabled!)" << std::endl;
+			}
+		}
+		
+		// Apply Saturn ring texture
+		Planet* saturn = solarSystem->getPlanet(5); // Saturn is 6th planet (index 5)
+		if (saturn) {
+			GLuint ringTexID = textureManager->getTexture("saturn_ring");
+			if (ringTexID > 0) {
+				saturn->setRingTexture(ringTexID);
+				std::cout << "Applied ring texture to Saturn" << std::endl;
+			}
+		}
+	}
+	
+	// Initialize starfield
+	starField = new StarField(5000, 1000.0f);
+	
+	// Initialize UI renderer
+	uiRenderer = new UIRenderer();
+	uiRenderer->setFPSCounter(&fpsCounter);
+	
+	// Set initial camera position and orientation
+	Camera.Move(SF3dVector{0, 100.0, 0.0});    // Position camera above the plane
+	Camera.RotateX(-85.0);                      // Look down at the solar system
+	Camera.MoveForward(200);                    // Move back for better view
+	
+	// Register callback functions
 	glutDisplayFunc(Display);
 	glutReshapeFunc(reshape);
 	glutKeyboardFunc(Keyboard);
+	glutKeyboardUpFunc(KeyboardUp);     // Key release callback for smooth movement
+	glutIdleFunc(idle);
+	glutMotionFunc(mouseMotion);        // Mouse drag callback
+	glutPassiveMotionFunc(mouseMotion); // Mouse move callback
+	glutMouseFunc(mouseButton);         // Mouse button callback
+	
+	// Print controls
+	std::cout << "========================================" << std::endl;
+	std::cout << "Solar System OpenGL - Enhanced Version" << std::endl;
+	std::cout << "========================================" << std::endl;
+	std::cout << "Camera Controls:" << std::endl;
+	std::cout << "  MOUSE - Look around (drag or move)" << std::endl;
+	std::cout << "  W/S - Forward/Backward" << std::endl;
+	std::cout << "  A/D - Turn Left/Right" << std::endl;
+	std::cout << "  X/Z - Look Up/Down" << std::endl;
+	std::cout << "  C/V - Strafe Left/Right" << std::endl;
+	std::cout << "  R/F - Move Up/Down" << std::endl;
+	std::cout << std::endl;
+	std::cout << "Features:" << std::endl;
+	std::cout << "  P - Pause/Resume Simulation" << std::endl;
+	std::cout << "  M - Toggle Mouse Control" << std::endl;
+	std::cout << "  T - Toggle Trails" << std::endl;
+	std::cout << "  O - Toggle Orbits" << std::endl;
+	std::cout << "  I - Toggle Info Panel" << std::endl;
+	std::cout << "  H - Toggle Help" << std::endl;
+	std::cout << "  +/- - Speed Up/Slow Down" << std::endl;
+	std::cout << "  1-8 - Select Planet" << std::endl;
+	std::cout << "  0 - Clear Selection" << std::endl;
+	std::cout << "  L - Toggle Lighting" << std::endl;
+	std::cout << "  Q - Quit" << std::endl;
+	std::cout << "========================================" << std::endl;
+	std::cout << std::endl;
+	std::cout << "Note: Textures loaded from 'textures/' folder" << std::endl;
+	std::cout << "      If textures not found, solid colors will be used" << std::endl;
+	std::cout << std::endl;
+	
+	// Enter main event loop
 	glutMainLoop();
+	
+	// Cleanup
+	delete solarSystem;
+	delete textureManager;
+	delete starField;
+	delete uiRenderer;
+	
 	return 0;
 }
